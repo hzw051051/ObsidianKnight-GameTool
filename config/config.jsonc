@@ -9,8 +9,12 @@
     // 截图检测间隔（毫秒）
     "screenshot_interval_ms": 200,
     // ===== ADB连接设置 =====
+    // ADB主机地址
     "adb_host": "127.0.0.1",
-    "adb_port": 5554,
+    // ADB端口（雷电9默认为5555，部分版本可能为5554）
+    "adb_port": 5555,
+    // ADB可执行文件路径（如果自动检测失败，请在此手动指定雷电模拟器目录下的adb.exe路径）
+    "adb_path": "E:\\LDPlayer\\LDPlayer9\\adb.exe",
     "max_log_lines": 500,
     // ===== 按钮坐标设置 (可手动调整) =====
     // 格式: [x, y]

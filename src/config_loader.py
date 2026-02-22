@@ -131,6 +131,11 @@ class Config:
         """重新加载配置"""
         self._load_configs()
     
+    @property
+    def debug(self) -> bool:
+        """是否显示调试信息"""
+        return self._config.get("debug", False)
+    
     # ===== 通用配置 =====
     
     @property
@@ -162,6 +167,11 @@ class Config:
     def max_log_lines(self) -> int:
         """日志最大行数"""
         return self._config.get("max_log_lines", 500)
+    
+    @property
+    def adb_path(self) -> str:
+        """ADB可执行文件路径"""
+        return self._config.get("adb_path", "adb")
     
     @property
     def card_weights(self) -> Dict[str, int]:

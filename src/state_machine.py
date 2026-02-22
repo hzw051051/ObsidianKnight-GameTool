@@ -29,7 +29,8 @@ class GameAutomation:
         # 初始化ADB控制器
         self.adb = ADBController(
             host=self.config.adb_host,
-            port=self.config.adb_port
+            port=self.config.adb_port,
+            adb_path=self.config.adb_path
         )
         
         # 初始化图像识别器

@@ -13,25 +13,31 @@ import io
 class ADBController:
     """ADB控制器，负责与模拟器交互"""
     
-    def __init__(self, host: str = "127.0.0.1", port: int = 5555):
+    def __init__(self, host: str = "127.0.0.1", port: int = 5555, adb_path: str = "adb"):
         """
         初始化ADB控制器
         
         Args:
             host: 模拟器ADB主机地址
             port: 模拟器ADB端口（雷电模拟器9默认5555）
+            adb_path: 手动指定的ADB路径
         """
         self.host = host
         self.port = port
         self.device_id = f"{host}:{port}"
         self._connected = False
         
-        # 雷电模拟器ADB路径（如果系统ADB不可用，尝试使用雷电自带的）
+        # 保存并查找ADB路径
+        self.config_adb_path = adb_path
         self.adb_path = self._find_adb()
     
     def _find_adb(self) -> str:
         """查找ADB可执行文件路径"""
-        # 首先尝试系统PATH中的adb
+        # 1. 首先尝试配置文件中指定的路径
+        if self.config_adb_path and os.path.exists(self.config_adb_path):
+            return self.config_adb_path
+            
+        # 2. 尝试系统PATH中的adb
         try:
             result = subprocess.run(
                 ["adb", "version"],
@@ -44,20 +50,34 @@ class ADBController:
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
         
-        # 尝试雷电模拟器自带的adb
+        # 3. 尝试通过运行中的进程查找
+        try:
+            # 使用 PowerShell 查找 dnplayer.exe 的路径
+            cmd = ["powershell", "-Command", "Get-Process dnplayer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if result.returncode == 0 and result.stdout.strip():
+                ld_dir = os.path.dirname(result.stdout.strip())
+                adb_exe = os.path.join(ld_dir, "adb.exe")
+                if os.path.exists(adb_exe):
+                    return adb_exe
+        except Exception:
+            pass
+            
+        # 4. 尝试预设的常见路径
         ld_paths = [
+            r"E:\LDPlayer\LDPlayer9\adb.exe",
+            r"D:\LDPlayer\LDPlayer9\adb.exe",
+            r"C:\LDPlayer\LDPlayer9\adb.exe",
             r"E:\leidian\LDPlayer9\adb.exe",
             r"C:\leidian\LDPlayer9\adb.exe",
             r"D:\leidian\LDPlayer9\adb.exe",
-            r"C:\Program Files\leidian\LDPlayer9\adb.exe",
-            r"D:\Program Files\leidian\LDPlayer9\adb.exe",
         ]
         
         for path in ld_paths:
             if os.path.exists(path):
                 return path
         
-        # 默认使用系统adb
+        # 默认使用系统adb（即使不存在，作为最后方案）
         return "adb"
     
     def _run_adb(self, args: list, timeout: int = 30) -> Tuple[bool, str]:

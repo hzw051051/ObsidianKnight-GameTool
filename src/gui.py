@@ -127,7 +127,6 @@ class GameAssistantGUI:
     def _on_connect(self):
         """连接模拟器"""
         self.connect_btn.config(state=tk.DISABLED)
-        self._log("正在连接模拟器...")
         
         def connect_thread():
             success = self.automation.connect()
@@ -140,11 +139,9 @@ class GameAssistantGUI:
         if success:
             self.conn_label.config(text="已连接", foreground="green")
             self.start_btn.config(state=tk.NORMAL)
-            self._log("✓ 模拟器连接成功")
         else:
             self.conn_label.config(text="连接失败", foreground="red")
             self.connect_btn.config(state=tk.NORMAL)
-            self._log("✗ 模拟器连接失败，请确保雷电模拟器已启动")
     
     def _on_start(self):
         """开始自动化"""
