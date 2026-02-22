@@ -1,0 +1,28 @@
+    def _start_continue_clicker(self):
+        """启动继续按钮自动点击线程"""
+        if self._continue_thread and self._continue_thread.is_alive():
+            return  # 线程已在运行
+        
+        self._continue_running = True
+        self._continue_thread = threading.Thread(target=self._continue_click_loop, daemon=True)
+        self._continue_thread.start()
+        self._log("  ✓ 继续按钮自动点击线程已启动（每0.5秒）")
+    
+    def _stop_continue_clicker(self):
+        """停止继续按钮自动点击线程"""
+        self._continue_running = False
+        if self._continue_thread:
+            self._continue_thread.join(timeout=1)
+            self._continue_thread = None
+    
+    def _continue_click_loop(self):
+        """继续按钮点击循环（后台线程）"""
+        while self._continue_running:
+            try:
+                if not self._paused:
+                    continue_x, continue_y = self.config.btn_continue_pos
+                    self.adb.tap(continue_x, continue_y)
+            except Exception as e:
+                pass  # 静默失败，不影响主流程
+            
+            time.sleep(0.5)  # 每0.5秒点击一次
