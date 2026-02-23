@@ -1,0 +1,78 @@
+{
+    // ===== 基础设置 =====
+    // 调试模式：true=打印详细信息，false=只打印关键信息
+    "debug": false,
+    // 障碍物选择时的默认选项（1/2/3），默认值3
+    "obstacle_choice": 3,
+    // 主循环间隔（毫秒），值越小检测越频繁
+    "loop_delay_ms": 200,
+    // 截图检测间隔（毫秒）
+    "screenshot_interval_ms": 100,
+    // ===== ADB连接设置 =====
+    // ADB主机地址
+    "adb_host": "127.0.0.1",
+    // ADB端口（雷电9默认为5555，部分版本可能为5554）
+    "adb_port": 5555,
+    // ADB可执行文件路径（如果自动检测失败，请在此手动指定雷电模拟器目录下的adb.exe路径）
+    "adb_path": "E:\\LDPlayer\\LDPlayer9\\adb.exe",
+    "max_log_lines": 500,
+    // ===== 按钮坐标设置 (可手动调整) =====
+    // 格式: [x, y]
+    // 提示: 如果点击位置不准,请用截图工具查看正确坐标后修改
+    "btn_start_pos": [
+        800,
+        818
+    ],
+    "btn_retry_pos": [
+        800,
+        740
+    ],
+    "btn_continue_pos": [
+        1470,
+        305
+    ],
+    "btn_purchase_confirm_pos": [
+        800,
+        640
+    ],
+    "btn_level_up_pos": [
+        800,
+        780
+    ],
+    "btn_cancel_purchase_pos": [
+        1520,
+        80
+    ],
+    "btn_open_chest_pos": [
+        800,
+        430
+    ],
+    "card_positions": [
+        [
+            360,
+            435
+        ],
+        [
+            800,
+            435
+        ],
+        [
+            1210,
+            420
+        ]
+    ],
+    "choice_positions": [
+        [
+            525,
+            208
+        ],
+        [
+            745,
+            208
+        ],
+        [
+            960,
+            203
+        ]
+    ]
+}
