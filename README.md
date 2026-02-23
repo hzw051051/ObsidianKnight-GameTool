@@ -31,16 +31,13 @@ pip install -r requirements.txt
 
 1. 启动雷电模拟器并打开游戏
 2. 进入关卡准备界面（开始按钮可见）
-3. 运行程序：
-   ```bash
-   python main.py
-   ```
+3. 运行脚本：启动游戏助手.bat
 4. 点击「连接模拟器」按钮
 5. 点击「开始」按钮
 6. 需要停止时点击「停止」按钮
 
 ## 配置说明
-
+暂时没用，下个版本可能会更新
 ### 卡牌权重 (`config/card_weights.jsonc`)
 
 ```jsonc
