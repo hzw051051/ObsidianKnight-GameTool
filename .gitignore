@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+release/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Logs
+error.log
+*.log
+
+# Nuitka
+*.build/
+*.dist/
+*.onefile-build/
+
+# Environments
+.env
+.venv
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
