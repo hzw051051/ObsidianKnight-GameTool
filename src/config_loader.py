@@ -7,6 +7,17 @@ import re
 from pathlib import Path
 from typing import Dict, Any
 
+# --- 极速日志记录逻辑 ---
+def log_debug(msg):
+    try:
+        import os
+        from datetime import datetime
+        with open("error.log", "a", encoding="utf-8") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] [PID:{os.getpid()}] [Config] {msg}\n")
+    except:
+        pass
+
 
 def remove_json_comments(json_str: str) -> str:
     """
@@ -104,9 +115,9 @@ class Config:
         config_path = self.config_dir / "config.jsonc"
         if config_path.exists():
             self._config = load_jsonc(str(config_path))
-            print(f"已加载配置: {config_path}")
+            log_debug(f"已加载配置: {config_path.absolute()}")
         else:
-            print(f"警告: 配置文件不存在，使用默认值: {config_path}")
+            log_debug(f"警告: 配置文件不存在: {config_path.absolute()}")
             self._config = {
                 "debug": False, # 新增 debug 属性
                 "obstacle_choice": 3,

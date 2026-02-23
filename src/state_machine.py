@@ -11,6 +11,17 @@ from .adb_controller import ADBController
 from .image_recognition import ImageRecognizer, GameState
 from .config_loader import Config
 
+# --- 极速日志记录逻辑 ---
+def log_debug(msg):
+    try:
+        import os
+        from datetime import datetime
+        with open("error.log", "a", encoding="utf-8") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] [PID:{os.getpid()}] [StateMachine] {msg}\n")
+    except:
+        pass
+
 
 class GameAutomation:
     """游戏自动化控制器"""
@@ -140,11 +151,14 @@ class GameAutomation:
         """继续按钮点击循环（后台线程）"""
         while self._continue_running:
             try:
-                # 持续点击继续按钮，不考虑暂停状态 (根据用户需求修改)
-                # 只要自动化在运行，就一直尝试点击
-                if not self._paused:
+                # 只要自动化在运行，且不在暂停状态，且不在胜利/准备等非持续点击状态
+                if not self._paused and not self._continue_paused:
                     continue_x, continue_y = self.config.btn_continue_pos
                     self.adb.tap(continue_x, continue_y)
+                else:
+                    if self._continue_paused:
+                        # log_debug("继续按钮点击已暂停 (当前界面不需要持续点击)")
+                        pass
             except Exception as e:
                 pass  # 静默失败，不影响主流程
             
@@ -166,6 +180,7 @@ class GameAutomation:
         """处理购买界面（点击右上角关闭）"""
         self._notify_state("取消购买")
         self._log("💰 发现购买弹窗 - 点击关闭")
+        self._continue_paused = True
         
         # 使用配置文件中的取消购买按钮坐标
         if hasattr(self.config, 'btn_cancel_purchase_pos'):
@@ -207,8 +222,10 @@ class GameAutomation:
             
             try:
                 # 截图
+                log_debug("正在请求截图...")
                 screenshot = self.adb.screenshot()
                 if screenshot is None:
+                    log_debug("警告: 截图失败")
                     if self.config.debug:
                         self._log("警告: 截图失败，重试中...")
                     time.sleep(1)
@@ -219,16 +236,17 @@ class GameAutomation:
                 
                 # 检测当前状态
                 state = self.recognizer.detect_state(screen)
+                log_debug(f"检测到状态: {state.name}")
                 
                 # 状态切换检测
                 state_changed = (state != self._last_state)
                 
                 if state_changed:
-                    self._log(f"[状态切换] {state.name}")
+                    if state != GameState.UNKNOWN:
+                        self._log(f"[状态切换] {state.name}")
                     self._last_state = state
                 
                 # 需要重复处理的状态（应对游戏卡顿）
-                # 所有需要点击操作的状态都应该重复执行
                 repeat_states = [
                     GameState.PURCHASE_FAILED,    # 购买失败（优先处理）
                     GameState.LEVEL_PREPARE,      # 开始界面
@@ -243,7 +261,11 @@ class GameAutomation:
                 
                 # 状态切换时处理，或特定状态重复处理
                 if state_changed or state in repeat_states:
+                    log_debug(f"准备执行处理逻辑 (state={state.name}, changed={state_changed})")
                     self._handle_state(state, screen, is_repeat=not state_changed)
+                else:
+                    if state == GameState.UNKNOWN:
+                        log_debug("未知状态，跳过处理")
                 
             except Exception as e:
                 import traceback
@@ -416,7 +438,13 @@ class GameAutomation:
         """处理障碍物界面（继续按钮）"""
         self._notify_state("障碍物")
         
-        # 由后台线程自动点击继续按钮，这里不需要额外操作
+        # 核心修复：进入障碍物界面说明已经脱离了胜利/准备阶段，恢复背景点击
+        self._continue_paused = False
+        
+        # 除了依靠后台线程，这里主动点一次，增加响应速度
+        x, y = self.config.btn_continue_pos
+        self.adb.tap(x, y)
+        
         self.stats["obstacles"] += 1
         time.sleep(0.5)
     
@@ -482,6 +510,7 @@ class GameAutomation:
         """处理失败界面"""
         self._log("💀 失败 - 点击继续")
         self._notify_state("失败")
+        self._continue_paused = True
         
         # 使用重试按钮坐标（失败界面也是这个位置）
         x, y = self.config.btn_retry_pos

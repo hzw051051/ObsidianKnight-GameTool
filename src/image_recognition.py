@@ -49,9 +49,6 @@ class ImageRecognizer:
         
         self._load_templates()
         self._prepare_special_features()
-        
-        # OCR识别器（延迟初始化）
-        self._ocr = None
     
     def _load_templates(self):
         """递归加载模板图片"""
@@ -79,22 +76,6 @@ class ImageRecognizer:
             tpl = self.templates["btn_retry_banner"]
             self._retry_banner_kp, self._retry_banner_des = self.sift.detectAndCompute(tpl, None)
             print(f"✅ 已预计算重投按钮特征点: {len(self._retry_banner_kp) if self._retry_banner_kp else 0} 个")
-    
-    @property
-    def ocr(self):
-        """延迟加载OCR"""
-        if self._ocr is None:
-            try:
-                from paddleocr import PaddleOCR
-                # 使用最基础参数以确保兼容性
-                self._ocr = PaddleOCR(
-                    use_angle_cls=False,
-                    lang='ch'
-                )
-            except Exception as e:
-                print(f"警告: PaddleOCR初始化失败: {e}")
-                self._ocr = None
-        return self._ocr
     
     def pil_to_cv2(self, pil_image: Image.Image) -> np.ndarray:
         """PIL图像转OpenCV格式"""
@@ -271,24 +252,32 @@ class ImageRecognizer:
                     return GameState.OBSTACLE_SPECIALBOX
 
         # ===== 2. 检测购买失败界面（阻塞性弹窗） =====
-        # 注意：此处不再进行 gold_pixels < 5000 的前置过滤，因为木质边框会产生金色干扰
-        # 依靠内部的多重特征（白字 + 深色背板 + 橙色按钮密度）已足够精准
-        center_text_region = screen[int(h*0.35):int(h*0.55), int(w*0.3):int(w*0.7)]
-        center_gray = cv2.cvtColor(center_text_region, cv2.COLOR_BGR2GRAY)
-        white_text_pixels = cv2.countNonZero((center_gray > 200).astype(np.uint8))
-        dark_bg_pixels = cv2.countNonZero((center_gray < 80).astype(np.uint8))
-        
-        button_check_region = hsv[int(h*0.55):int(h*0.75), int(w*0.35):int(w*0.65)]
-        orange_mask = cv2.inRange(button_check_region, np.array([10, 150, 150]), np.array([25, 255, 255]))
-        button_orange_pixels = cv2.countNonZero(orange_mask)
-        
-        if white_text_pixels > 2000 and dark_bg_pixels > 20000 and button_orange_pixels > 5000:
-            pf_x, pf_y = 800, 640
-            pf_rect = hsv[pf_y-30:pf_y+30, pf_x-100:pf_x+100]
-            pf_orange_mask = cv2.inRange(pf_rect, np.array([10, 120, 120]), np.array([25, 255, 255]))
-            pf_density = cv2.countNonZero(pf_orange_mask) / (pf_rect.size/3)
-            if 0.5 < pf_density < 0.9:
-                return GameState.PURCHASE_FAILED
+        # 注意：购买失败弹窗会遮挡住背景，导致顶部 UI 的金色特征消失或大幅减弱。
+        # 如果检测到大量金色/银色像素，优先排除弹窗状态。
+        if gold_pixels < 5000:
+            center_text_region = screen[int(h*0.35):int(h*0.55), int(w*0.3):int(w*0.7)]
+            center_gray = cv2.cvtColor(center_text_region, cv2.COLOR_BGR2GRAY)
+            white_text_pixels = cv2.countNonZero((center_gray > 200).astype(np.uint8))
+            dark_bg_pixels = cv2.countNonZero((center_gray < 80).astype(np.uint8))
+            
+            button_check_region = hsv[int(h*0.55):int(h*0.75), int(w*0.35):int(w*0.65)]
+            orange_mask = cv2.inRange(button_check_region, np.array([10, 150, 150]), np.array([25, 255, 255]))
+            button_orange_pixels = cv2.countNonZero(orange_mask)
+            
+            # 初步像素特征判断
+            if white_text_pixels > 2000 and dark_bg_pixels > 20000 and button_orange_pixels > 5000:
+                pf_x, pf_y = 800, 640
+                pf_rect = hsv[pf_y-30:pf_y+30, pf_x-100:pf_x+100]
+                pf_orange_mask = cv2.inRange(pf_rect, np.array([10, 120, 120]), np.array([25, 255, 255]))
+                pf_density = cv2.countNonZero(pf_orange_mask) / (pf_rect.size/3)
+                
+                if 0.5 < pf_density < 0.9:
+                    # 像素特征符合，使用模板匹配进行二次确认（提高鲁棒性）
+                    if self.find_template(screen, "purchase_failed", threshold=0.6):
+                        return GameState.PURCHASE_FAILED
+                    else:
+                        # 如果没有找到模板，但在调试日志中看到频繁触发，可能需要记录
+                        pass
 
         # 0. 检测卡牌选择界面 (特征：SIFT 匹配右下角“重投”按钮 OR 大量米色描述背景)
         # 该界面在特殊情况下（如开场秒杀升级）会被大幅压暗，导致所有颜色特征失效。
@@ -298,7 +287,11 @@ class ImageRecognizer:
         if self._retry_banner_des is not None:
             # 限制在右下角区域 [700:, 1100:] 以提高速度并减少干扰
             retry_roi = screen[700:, 1100:]
-            kp_r, des_r = self.sift.detectAndCompute(retry_roi, None)
+            if retry_roi.size == 0 or retry_roi.shape[0] < 10 or retry_roi.shape[1] < 10:
+                kp_r, des_r = None, None
+            else:
+                kp_r, des_r = self.sift.detectAndCompute(retry_roi, None)
+            
             if des_r is not None:
                 bf = cv2.BFMatcher()
                 matches = bf.knnMatch(self._retry_banner_des, des_r, k=2)
@@ -397,14 +390,19 @@ class ImageRecognizer:
             return GameState.OBSTACLE_CHOICE
             
         # 6. 最后兜底检测障碍物继续界面
-        right_roi = screen[int(h*0.3):int(h*0.6), int(w*0.8):]
-        right_gray_pixels = cv2.countNonZero(cv2.inRange(cv2.cvtColor(right_roi, cv2.COLOR_BGR2HSV), np.array([0, 0, 50]), np.array([180, 50, 200])))
+        # 特征：右侧中心区域有明显的按钮 (橙色/红色系)
+        btn_roi_hsv = hsv[int(h*0.3):int(h*0.6), int(w*0.8):]
+        btn_mask = cv2.inRange(btn_roi_hsv, np.array([0, 100, 100]), np.array([25, 255, 255]))
+        btn_pixels = cv2.countNonZero(btn_mask)
         
-        if gold_pixels > 80000 and right_gray_pixels > 3000 and silver_pixels < 5000 and dark_pixels > 5000:
+        # 辅助参考特征：右侧灰色/边缘
+        right_gray_pixels = cv2.countNonZero(cv2.inRange(btn_roi_hsv, np.array([0, 0, 50]), np.array([180, 50, 200])))
+        
+        # 如果检测到右侧有明显的按钮特征
+        # 备注：不再强依赖 gold_pixels > 80000，因为背景多变
+        if btn_pixels > 2000 and (gold_pixels > 20000 or right_gray_pixels > 2000):
             return GameState.OBSTACLE_CONTINUE
-        
-        # 7. 特殊障碍物宝箱界面检测 (精准模板法已经在顶部执行)
-
+            
         return GameState.UNKNOWN
     
     def detect_card_ids(

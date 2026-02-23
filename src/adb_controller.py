@@ -9,6 +9,20 @@ from typing import Optional, Tuple
 from PIL import Image
 import io
 
+# Windows 下隐藏子进程控制台窗口的标志
+CREATE_NO_WINDOW = 0x08000000
+
+# --- 极速日志记录逻辑 ---
+def log_debug(msg):
+    try:
+        import os
+        from datetime import datetime
+        with open("error.log", "a", encoding="utf-8") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] [PID:{os.getpid()}] [ADB] {msg}\n")
+    except:
+        pass
+
 
 class ADBController:
     """ADB控制器，负责与模拟器交互"""
@@ -43,7 +57,8 @@ class ADBController:
                 ["adb", "version"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
+                creationflags=CREATE_NO_WINDOW
             )
             if result.returncode == 0:
                 return "adb"
@@ -54,7 +69,7 @@ class ADBController:
         try:
             # 使用 PowerShell 查找 dnplayer.exe 的路径
             cmd = ["powershell", "-Command", "Get-Process dnplayer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path"]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, creationflags=CREATE_NO_WINDOW)
             if result.returncode == 0 and result.stdout.strip():
                 ld_dir = os.path.dirname(result.stdout.strip())
                 adb_exe = os.path.join(ld_dir, "adb.exe")
@@ -93,14 +108,17 @@ class ADBController:
         """
         cmd = [self.adb_path, "-s", self.device_id] + args
         try:
+            log_debug(f"执行命令: {' '.join(cmd)}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
                 encoding='utf-8',
-                errors='ignore'
+                errors='ignore',
+                creationflags=CREATE_NO_WINDOW
             )
+            log_debug(f"命令结果 (ret={result.returncode}): {result.stdout[:50]}...")
             return result.returncode == 0, result.stdout + result.stderr
         except subprocess.TimeoutExpired:
             return False, "命令执行超时"
@@ -122,7 +140,8 @@ class ADBController:
                 text=True,
                 timeout=10,
                 encoding='utf-8',
-                errors='ignore'
+                errors='ignore',
+                creationflags=CREATE_NO_WINDOW
             )
             
             # 解析设备列表
@@ -154,7 +173,8 @@ class ADBController:
                     text=True,
                     timeout=5,
                     encoding='utf-8',
-                    errors='ignore'
+                    errors='ignore',
+                    creationflags=CREATE_NO_WINDOW
                 )
                 output = result.stdout + result.stderr
                 
@@ -173,7 +193,7 @@ class ADBController:
         """断开连接"""
         cmd = [self.adb_path, "disconnect", self.device_id]
         try:
-            subprocess.run(cmd, capture_output=True, timeout=5)
+            subprocess.run(cmd, capture_output=True, timeout=5, creationflags=CREATE_NO_WINDOW)
             self._connected = False
             return True
         except Exception:
@@ -197,7 +217,8 @@ class ADBController:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                timeout=10
+                timeout=10,
+                creationflags=CREATE_NO_WINDOW
             )
             
             if result.returncode == 0 and result.stdout:

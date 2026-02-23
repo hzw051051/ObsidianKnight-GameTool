@@ -1,6 +1,4 @@
 opencv-python>=4.8.0
 numpy>=1.24.0
 pure-python-adb>=0.3.0.dev0
-paddleocr>=2.7.0
-paddlepaddle>=2.5.0
 Pillow>=10.0.0

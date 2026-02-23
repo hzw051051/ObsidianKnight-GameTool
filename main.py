@@ -10,9 +10,23 @@
 5. 点击「开始」按钮开始自动刷本
 6. 点击「停止」按钮停止自动化
 """
-import sys
 import os
+import sys
+import multiprocessing
+import traceback
 from pathlib import Path
+from datetime import datetime
+
+# --- 极速日志记录逻辑 ---
+def log_debug(msg):
+    try:
+        with open("error.log", "a", encoding="utf-8") as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] [PID:{os.getpid()}] {msg}\n")
+    except:
+        pass
+
+log_debug(f"程序启动 (main.py) - 参数: {sys.argv}")
 
 # 确保源码目录在路径中
 src_dir = Path(__file__).parent
@@ -39,4 +53,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # Nuitka/PyInstaller 打包支持
+    multiprocessing.freeze_support()
     main()

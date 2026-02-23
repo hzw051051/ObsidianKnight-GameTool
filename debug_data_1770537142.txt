@@ -1,8 +1,0 @@
-bottom_orange: 32003
-english_btn: 6131
-continue_btn: 172
-center_char: 33011
-attr_panel: 176159
-best_time_white: 266
-best_time_dark: 20578
-state: VICTORY

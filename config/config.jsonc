@@ -5,9 +5,9 @@
     // 障碍物选择时的默认选项（1/2/3），默认值3
     "obstacle_choice": 3,
     // 主循环间隔（毫秒），值越小检测越频繁
-    "loop_delay_ms": 500,
+    "loop_delay_ms": 200,
     // 截图检测间隔（毫秒）
-    "screenshot_interval_ms": 200,
+    "screenshot_interval_ms": 100,
     // ===== ADB连接设置 =====
     // ADB主机地址
     "adb_host": "127.0.0.1",
