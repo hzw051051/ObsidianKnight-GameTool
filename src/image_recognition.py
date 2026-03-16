@@ -196,6 +196,14 @@ class ImageRecognizer:
             当前游戏状态
         """
         h_img, w_img = screen.shape[:2]
+        
+        # 标准化截图到 1600x900（所有硬编码坐标和模板均基于此分辨率）
+        # 若截图来自不同分辨率的模拟器，自动缩放以确保识别逻辑兼容
+        STANDARD_W, STANDARD_H = 1600, 900
+        if w_img != STANDARD_W or h_img != STANDARD_H:
+            screen = cv2.resize(screen, (STANDARD_W, STANDARD_H))
+            h_img, w_img = STANDARD_H, STANDARD_W
+        
         hsv = cv2.cvtColor(screen, cv2.COLOR_BGR2HSV)
         h, w = h_img, w_img
 
