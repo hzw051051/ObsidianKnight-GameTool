@@ -8,6 +8,8 @@
     "loop_delay_ms": 200,
     // 截图检测间隔（毫秒）
     "screenshot_interval_ms": 100,
+    // 是否启用赛季结束奖励界面(竞技场OK按钮)检测，true=自动点击OK，false=忽略
+    "enable_arena_ok_detection": true,
     // ===== ADB连接设置 =====
     // ADB主机地址
     "adb_host": "127.0.0.1",
@@ -74,5 +76,9 @@
             960,
             203
         ]
+    ],
+    "btn_ok_pos": [
+        1470,
+        760
     ]
 }

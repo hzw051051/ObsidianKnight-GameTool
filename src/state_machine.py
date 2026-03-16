@@ -256,7 +256,8 @@ class GameAutomation:
                     GameState.VICTORY,            # 胜利界面
                     GameState.PURCHASE,           # 购买弹窗
                     GameState.LEVEL_UP,           # 升级界面
-                    GameState.LEVEL_UP_AFTER      # 升级后确认界面
+                    GameState.LEVEL_UP_AFTER,     # 升级后确认界面
+                    GameState.ARENA_OK            # 赛季结束奖励界面
                 ]
                 
                 # 状态切换时处理，或特定状态重复处理
@@ -311,6 +312,13 @@ class GameAutomation:
         
         elif state == GameState.OBSTACLE_SPECIALBOX:
             self._handle_obstacle_specialbox(screen, is_repeat)
+        
+        elif state == GameState.ARENA_OK:
+            if self.config.enable_arena_ok_detection:
+                self._handle_arena_ok(screen)
+            else:
+                # 配置中禁用了检测，忽略该状态
+                pass
         
         elif state == GameState.UNKNOWN:
             # 未知状态，可能是战斗中，等待
@@ -528,6 +536,18 @@ class GameAutomation:
         self.adb.tap(x, y)
         
         time.sleep(2)  # 增加等待时间，确保弹窗完全关闭（容错处理）
+
+    def _handle_arena_ok(self, screen):
+        """处理赛季结束奖励界面（点击 OK 按钮）"""
+        self._notify_state("赛季奖励")
+        self._continue_paused = True
+        
+        # 使用配置文件中的 OK 按钮坐标
+        x, y = self.config.btn_ok_pos
+        self._log(f"🏆 发现赛季结束奖励界面 - 点击 OK 坐标({x}, {y})")
+        result = self.adb.tap(x, y)
+        self._log(f"  tap 结果: {result}")
+        time.sleep(1)
 
 
 # 测试代码

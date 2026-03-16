@@ -147,6 +147,11 @@ class Config:
         """是否显示调试信息"""
         return self._config.get("debug", False)
     
+    @property
+    def enable_arena_ok_detection(self) -> bool:
+        """是否启用赛季结束奖励界面(竞技场OK按钮)检测"""
+        return self._config.get("enable_arena_ok_detection", True)
+    
     # ===== 通用配置 =====
     
     @property
@@ -261,6 +266,11 @@ class Config:
         positions = self._config.get("choice_positions", [[600, 250], [900, 250], [1200, 250]])
         return [tuple(p) for p in positions]
 
+    @property
+    def btn_ok_pos(self) -> tuple:
+        """确定按钮坐标"""
+        pos = self._config.get("btn_ok_pos", [1470, 760])
+        return tuple(pos)
 
 # 测试代码
 if __name__ == "__main__":

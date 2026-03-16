@@ -25,6 +25,7 @@ class GameState(Enum):
     LEVEL_UP = auto()          # 升级界面 (图4)
     LEVEL_UP_AFTER = auto()    # 升级后界面 (图8, 需关闭)
     OBSTACLE_SPECIALBOX = auto() # 特殊障碍物宝箱界面
+    ARENA_OK = auto()            # 赛季结束奖励界面（竞技场OK按钮）
 
 
 class ImageRecognizer:
@@ -278,6 +279,26 @@ class ImageRecognizer:
                     else:
                         # 如果没有找到模板，但在调试日志中看到频繁触发，可能需要记录
                         pass
+
+        # 0. 检测卡牌选择界面 (特征：SIFT 匹配右下角“重投”按钮 OR 大量米色描述背景)
+
+        # ===== 2.5 检测赛季结束奖励界面（竞技场 OK 按钮）=====
+        # 特征：右下角有独特的橙色/金色 "OK" 按钮，底部有深色赛季奖励面板。
+        # 与 PURCHASE 的区别：无右上角红色 X 关闭按钮。
+        # 与 CARD_SELECTION 的区别：无大量米色描述背景。
+        # 使用模板匹配，限定在右下角区域以避免误判。
+        if "btn_ok" in self.templates and beige_pixels < 50000:
+            # 只在右下角区域搜索 OK 按钮，减少误判风险
+            ok_roi = screen[int(h*0.6):, int(w*0.8):]
+            ok_match = self.find_template(ok_roi, "btn_ok", threshold=0.7)
+            if ok_match:
+                # 二次确认：底部应有深色奖励面板（排除战斗界面等偶发匹配）
+                bottom_panel = screen[int(h*0.55):int(h*0.7), int(w*0.1):int(w*0.9)]
+                bp_gray = cv2.cvtColor(bottom_panel, cv2.COLOR_BGR2GRAY)
+                bp_dark = cv2.countNonZero((bp_gray < 80).astype(np.uint8))
+                # 底部面板应有大量深色像素（深色奖励栏背景）
+                if bp_dark > 10000:
+                    return GameState.ARENA_OK
 
         # 0. 检测卡牌选择界面 (特征：SIFT 匹配右下角“重投”按钮 OR 大量米色描述背景)
         # 该界面在特殊情况下（如开场秒杀升级）会被大幅压暗，导致所有颜色特征失效。

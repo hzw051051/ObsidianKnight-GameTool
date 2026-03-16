@@ -58,6 +58,7 @@ print(f"继续按钮:     {config.btn_continue_pos}")
 print(f"购买确认:     {config.btn_purchase_confirm_pos}")
 print(f"卡牌位置:     {config.card_positions}")
 print(f"选项位置:     {config.choice_positions}")
+print(f"确定按钮:     {config.btn_ok_pos}")
 
 print("\n" + "=" * 60)
 print("请检查这些坐标是否在模拟器分辨率范围内 (0-{w}, 0-{h})".format(w=w, h=h))

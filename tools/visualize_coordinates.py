@@ -54,6 +54,7 @@ draw_point(screen_bgr, config.btn_purchase_confirm_pos, "Confirm", (255, 255, 0)
 
 draw_point(screen_bgr, config.btn_level_up_pos, "Level", (255, 255, 255))
 draw_point(screen_bgr, config.btn_cancel_purchase_pos, "Cancel", (0, 0, 0))
+draw_point(screen_bgr, config.btn_ok_pos, "OK", (100, 100, 100))
 
 # 标注卡牌位置
 for i, pos in enumerate(config.card_positions):
