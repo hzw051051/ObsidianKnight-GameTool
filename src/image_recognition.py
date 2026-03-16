@@ -285,20 +285,34 @@ class ImageRecognizer:
         # ===== 2.5 检测赛季结束奖励界面（竞技场 OK 按钮）=====
         # 特征：右下角有独特的橙色/金色 "OK" 按钮，底部有深色赛季奖励面板。
         # 与 PURCHASE 的区别：无右上角红色 X 关闭按钮。
-        # 与 CARD_SELECTION 的区别：无大量米色描述背景。
-        # 使用模板匹配，限定在右下角区域以避免误判。
+        # 与 CARD_SELECTION 的区别：无大量米色描述背景，且无"重投"按钮。
+        # 注意：阈值必须 >= 0.85，否则卡牌界面的"重投"按钮(0.827)会误匹配。
         if "btn_ok" in self.templates and beige_pixels < 50000:
             # 只在右下角区域搜索 OK 按钮，减少误判风险
             ok_roi = screen[int(h*0.6):, int(w*0.8):]
-            ok_match = self.find_template(ok_roi, "btn_ok", threshold=0.7)
+            ok_match = self.find_template(ok_roi, "btn_ok", threshold=0.85)
             if ok_match:
-                # 二次确认：底部应有深色奖励面板（排除战斗界面等偶发匹配）
-                bottom_panel = screen[int(h*0.55):int(h*0.7), int(w*0.1):int(w*0.9)]
-                bp_gray = cv2.cvtColor(bottom_panel, cv2.COLOR_BGR2GRAY)
-                bp_dark = cv2.countNonZero((bp_gray < 80).astype(np.uint8))
-                # 底部面板应有大量深色像素（深色奖励栏背景）
-                if bp_dark > 10000:
-                    return GameState.ARENA_OK
+                # 排斥条件：如果右下角有"重投"按钮 SIFT 特征，说明是卡牌界面
+                is_card_screen = False
+                if self._retry_banner_des is not None:
+                    retry_roi = screen[700:, 1100:]
+                    if retry_roi.size > 0 and retry_roi.shape[0] >= 10 and retry_roi.shape[1] >= 10:
+                        kp_r, des_r = self.sift.detectAndCompute(retry_roi, None)
+                        if des_r is not None:
+                            bf = cv2.BFMatcher()
+                            matches = bf.knnMatch(self._retry_banner_des, des_r, k=2)
+                            good_retry = [m for m_pair in matches if len(m_pair) == 2 for m, n in [m_pair] if m.distance < 0.7 * n.distance]
+                            if len(good_retry) >= 15:
+                                is_card_screen = True
+
+                if not is_card_screen:
+                    # 二次确认：底部应有深色奖励面板（排除战斗界面等偶发匹配）
+                    bottom_panel = screen[int(h*0.55):int(h*0.7), int(w*0.1):int(w*0.9)]
+                    bp_gray = cv2.cvtColor(bottom_panel, cv2.COLOR_BGR2GRAY)
+                    bp_dark = cv2.countNonZero((bp_gray < 80).astype(np.uint8))
+                    # 底部面板应有大量深色像素（深色奖励栏背景）
+                    if bp_dark > 10000:
+                        return GameState.ARENA_OK
 
         # 0. 检测卡牌选择界面 (特征：SIFT 匹配右下角“重投”按钮 OR 大量米色描述背景)
         # 该界面在特殊情况下（如开场秒杀升级）会被大幅压暗，导致所有颜色特征失效。
