@@ -125,10 +125,12 @@ class ADBController:
         except Exception as e:
             return False, str(e)
     
-    def connect(self) -> bool:
+    def connect(self, retry=True) -> bool:
         """
         连接到模拟器
         
+        Args:
+            retry: 是否在失败时尝试重启ADB服务修复连接
         Returns:
             是否连接成功
         """
@@ -184,10 +186,37 @@ class ADBController:
                     print(f"已连接到: {self.device_id}")
                     return True
             
+            if retry:
+                print("连接失败，尝试强制重启 ADB 服务进行修复...")
+                self._repair_adb()
+                return self.connect(retry=False)
+                
             return False
         except Exception as e:
-            print(f"连接失败: {e}")
+            print(f"连接异常: {e}")
+            if retry:
+                print("连接异常，尝试强制重启 ADB 服务进行修复...")
+                self._repair_adb()
+                return self.connect(retry=False)
             return False
+
+    def _repair_adb(self):
+        """尝试彻底清理卡死的 ADB 进程并重启 Server"""
+        try:
+            print("正在清理卡死的 adb 进程...")
+            subprocess.run(["taskkill", "/F", "/IM", "adb.exe", "/T"], 
+                           capture_output=True, 
+                           creationflags=CREATE_NO_WINDOW)
+            time.sleep(1)
+            
+            print("正在重新启动 ADB 服务...")
+            subprocess.run([self.adb_path, "start-server"], 
+                           capture_output=True, 
+                           timeout=10, 
+                           creationflags=CREATE_NO_WINDOW)
+            time.sleep(2)
+        except Exception as e:
+            print(f"ADB 服务重启修复失败: {e}")
     
     def disconnect(self) -> bool:
         """断开连接"""
